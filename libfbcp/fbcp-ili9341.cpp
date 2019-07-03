@@ -29,6 +29,19 @@
 #include "mem_alloc.h"
 #include "keyboard.h"
 
+// Track current SPI display controller write X and Y cursors.
+static int spiX = -1;
+static int spiY = -1;
+static int spiEndX = DISPLAY_WIDTH;
+
+static uint32_t curFrameEnd;
+static uint32_t prevFrameEnd;
+static bool prevFrameWasInterlacedUpdate = false;
+static bool interlacedUpdate = false; // True if the previous update we did was an interlaced half field update.
+static int frameParity = 0; // For interlaced frame updates, this is either 0 or 1 to denote evens or odds.
+
+static uint16_t *framebuffer[2];
+
 int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {
   int changedPixels = 0;
@@ -88,6 +101,46 @@ void ProgramInterruptHandler(int signal)
   syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAKE, 1, 0, 0, 0);
 }
 
+int FBCPInit()
+{
+#ifdef RUN_WITH_REALTIME_THREAD_PRIORITY
+    SetRealtimeThreadPriority();
+#endif
+    OpenMailbox();
+    InitSPI();
+    displayContentsLastChanged = tick();
+    displayOff = false;
+
+    InitGPU();
+
+    spans = (Span*)Malloc((gpuFrameWidth * gpuFrameHeight / 2) * sizeof(Span), "main() task spans");
+    int size = gpuFramebufferSizeBytes;
+#ifdef USE_GPU_VSYNC
+    // BUG in vc_dispmanx_resource_read_data(!!): If one is capturing a small subrectangle of a large screen resource rectangle, the destination pointer
+  // is in vc_dispmanx_resource_read_data() incorrectly still taken to point to the top-left corner of the large screen resource, instead of the top-left
+    // corner of the subrectangle to capture. Therefore do dirty pointer arithmetic to adjust for this. To make this safe, videoCoreFramebuffer is allocated
+    // double its needed size so that this adjusted pointer does not reference outside allocated memory (if it did, vc_dispmanx_resource_read_data() was seen
+    // to randomly fail and then subsequently hang if called a second time)
+    size *= 2;
+#endif
+    framebuffer = { (uint16_t *)Malloc(size, "main() framebuffer0"), (uint16_t *)Malloc(gpuFramebufferSizeBytes, "main() framebuffer1") };
+    memset(framebuffer[0], 0, size); // Doublebuffer received GPU memory contents, first buffer contains current GPU memory,
+    memset(framebuffer[1], 0, gpuFramebufferSizeBytes); // second buffer contains whatever the display is currently showing. This allows diffing pixels between the two.
+#ifdef USE_GPU_VSYNC
+    // Due to the above bug. In USE_GPU_VSYNC mode, we directly snapshot to framebuffer[0], so it has to be prepared specially to work around the
+    // dispmanx bug.
+    framebuffer[0] += (gpuFramebufferSizeBytes>>1);
+#endif
+
+    curFrameEnd = spiTaskMemory->queueTail;
+    prevFrameEnd = spiTaskMemory->queueTail;
+
+    OpenKeyboard();
+    printf("All initialized\n");
+
+    return 0;
+}
+
 int main()
 {
   signal(SIGINT, ProgramInterruptHandler);
@@ -95,48 +148,7 @@ int main()
   signal(SIGUSR1, ProgramInterruptHandler);
   signal(SIGUSR2, ProgramInterruptHandler);
   signal(SIGTERM, ProgramInterruptHandler);
-#ifdef RUN_WITH_REALTIME_THREAD_PRIORITY
-  SetRealtimeThreadPriority();
-#endif
-  OpenMailbox();
-  InitSPI();
-  displayContentsLastChanged = tick();
-  displayOff = false;
 
-  // Track current SPI display controller write X and Y cursors.
-  int spiX = -1;
-  int spiY = -1;
-  int spiEndX = DISPLAY_WIDTH;
-
-  InitGPU();
-
-  spans = (Span*)Malloc((gpuFrameWidth * gpuFrameHeight / 2) * sizeof(Span), "main() task spans");
-  int size = gpuFramebufferSizeBytes;
-#ifdef USE_GPU_VSYNC
-  // BUG in vc_dispmanx_resource_read_data(!!): If one is capturing a small subrectangle of a large screen resource rectangle, the destination pointer 
-  // is in vc_dispmanx_resource_read_data() incorrectly still taken to point to the top-left corner of the large screen resource, instead of the top-left
-  // corner of the subrectangle to capture. Therefore do dirty pointer arithmetic to adjust for this. To make this safe, videoCoreFramebuffer is allocated
-  // double its needed size so that this adjusted pointer does not reference outside allocated memory (if it did, vc_dispmanx_resource_read_data() was seen
-  // to randomly fail and then subsequently hang if called a second time)
-  size *= 2;
-#endif
-  uint16_t *framebuffer[2] = { (uint16_t *)Malloc(size, "main() framebuffer0"), (uint16_t *)Malloc(gpuFramebufferSizeBytes, "main() framebuffer1") };
-  memset(framebuffer[0], 0, size); // Doublebuffer received GPU memory contents, first buffer contains current GPU memory,
-  memset(framebuffer[1], 0, gpuFramebufferSizeBytes); // second buffer contains whatever the display is currently showing. This allows diffing pixels between the two.
-#ifdef USE_GPU_VSYNC
-  // Due to the above bug. In USE_GPU_VSYNC mode, we directly snapshot to framebuffer[0], so it has to be prepared specially to work around the
-  // dispmanx bug.
-  framebuffer[0] += (gpuFramebufferSizeBytes>>1);
-#endif
-
-  uint32_t curFrameEnd = spiTaskMemory->queueTail;
-  uint32_t prevFrameEnd = spiTaskMemory->queueTail;
-
-  bool prevFrameWasInterlacedUpdate = false;
-  bool interlacedUpdate = false; // True if the previous update we did was an interlaced half field update.
-  int frameParity = 0; // For interlaced frame updates, this is either 0 or 1 to denote evens or odds.
-  OpenKeyboard();
-  printf("All initialized, now running main loop...\n");
   while(programRunning)
   {
     prevFrameWasInterlacedUpdate = interlacedUpdate;

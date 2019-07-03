@@ -6,3 +6,6 @@
 *.S
 *.symvers
 *.order
+.idea
+cmake-build-*
+
