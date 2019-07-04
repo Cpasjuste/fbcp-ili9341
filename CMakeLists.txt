@@ -5,5 +5,5 @@ add_subdirectory(libfbcp)
 
 # fbcp-ili9341 executable
 project(fbcp-ili9341)
-add_executable(${PROJECT_NAME} example/fbcp.cpp)
+add_executable(${PROJECT_NAME} fbcp/fbcp.cpp)
 target_link_libraries(${PROJECT_NAME} fbcp)

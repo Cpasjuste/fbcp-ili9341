@@ -6,9 +6,6 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
-include_directories(/opt/vc/include)
-link_directories(/opt/vc/lib)
-
 file(GLOB sourceFiles *.cpp)
 
 message(STATUS "Doing a ${CMAKE_BUILD_TYPE} build")
@@ -26,6 +23,8 @@ set(DEFAULT_TO_SINGLE_CORE_BOARD OFF)
 set(DEFAULT_TO_ARMV6Z OFF)
 set(DEFAULT_TO_ARMV7A OFF)
 set(DEFAULT_TO_ARMV8A OFF)
+
+option(RECALBOX_BUILD "RECALBOX BUILD" OFF)
 
 # http://ozzmaker.com/check-raspberry-software-hardware-version-command-line/
 if (BOARD_REVISION MATCHES "(0002)|(0003)|(0004)|(0005)|(0006)|(0007)|(0008)|(0009)" OR BOARD_REVISION MATCHES "(000d)|(000e)|(000f)|(0010)|(0011)|(0012)" OR BOARD_REVISION MATCHES "(900092)|(900093)|(9000c1)")
@@ -257,4 +256,10 @@ else()
 endif()
 
 add_library(${PROJECT_NAME} ${sourceFiles})
-target_link_libraries(${PROJECT_NAME} PUBLIC pthread bcm_host atomic)
+if(RECALBOX_BUILD)
+    target_include_directories(${PROJECT_NAME} PUBLIC /opt/vc/include)
+    target_link_directories(${PROJECT_NAME} PUBLIC /opt/vc/lib)
+    target_link_libraries(${PROJECT_NAME} PUBLIC pthread bcm_host atomic)
+else()
+    target_link_libraries(${PROJECT_NAME} PUBLIC pthread bcm_host vchostif atomic)
+endif()
