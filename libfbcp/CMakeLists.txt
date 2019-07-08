@@ -264,5 +264,5 @@ else()
 	target_link_libraries(${PROJECT_NAME} PUBLIC pthread bcm_host atomic)
 endif()
 
-install(FILES ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.a DESTINATION lib)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.a DESTINATION lib)
 install(FILES ${CMAKE_SOURCE_DIR}/libfbcp/fbcp.h DESTINATION include)
