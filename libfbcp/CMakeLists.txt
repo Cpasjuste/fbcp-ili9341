@@ -24,7 +24,7 @@ set(DEFAULT_TO_ARMV6Z OFF)
 set(DEFAULT_TO_ARMV7A OFF)
 set(DEFAULT_TO_ARMV8A OFF)
 
-option(RECALBOX_BUILD "RECALBOX BUILD" OFF)
+option(BUILDROOT "BUILDROOT" OFF)
 
 # http://ozzmaker.com/check-raspberry-software-hardware-version-command-line/
 if (BOARD_REVISION MATCHES "(0002)|(0003)|(0004)|(0005)|(0006)|(0007)|(0008)|(0009)" OR BOARD_REVISION MATCHES "(000d)|(000e)|(000f)|(0010)|(0011)|(0012)" OR BOARD_REVISION MATCHES "(900092)|(900093)|(9000c1)")
@@ -256,7 +256,7 @@ else()
 endif()
 
 add_library(${PROJECT_NAME} STATIC ${sourceFiles})
-if(RECALBOX_BUILD)
+if(BUILDROOT)
 	target_link_libraries(${PROJECT_NAME} PUBLIC pthread bcm_host vchostif atomic)
 else()
 	target_include_directories(${PROJECT_NAME} PUBLIC /opt/vc/include)
