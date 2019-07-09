@@ -81,7 +81,7 @@ void MarkProgramQuitting()
   syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAKE, 1, 0, 0, 0);
 }
 
-int FBCPInit(uint16_t* targetFramebuffer = NULL, int width = 0, int height = 0, int bpp = 0)
+extern "C" int fbcp_init(uint16_t* targetFramebuffer, int width, int height, int bpp)
 {
   if (targetFramebuffer)
   {
@@ -146,7 +146,7 @@ int FBCPInit(uint16_t* targetFramebuffer = NULL, int width = 0, int height = 0, 
   return 0;
 }
 
-void FBCPExit()
+extern "C" void fbcp_exit()
 {
   MarkProgramQuitting();
 
@@ -171,7 +171,7 @@ void FBCPExit()
   printf("Quit.\n");
 }
 
-int FBCPProcessFrame()
+extern "C" int fbcp_process()
 {
   prevFrameWasInterlacedUpdate = interlacedUpdate;
 

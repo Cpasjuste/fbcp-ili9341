@@ -2,9 +2,10 @@
 // Created by cpasjuste on 03/07/19.
 //
 
-#include <cstdio>
-#include <cstdlib>
-#include <csignal>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <signal.h>
 
 #include "../libfbcp/fbcp.h"
 
@@ -35,7 +36,7 @@ void ProgramInterruptHandler(int signal)
   if (!exited)
   {
     exited = true;
-    FBCPExit();
+    fbcp_exit();
   }
 }
 
@@ -47,17 +48,18 @@ int main()
   signal(SIGUSR2, ProgramInterruptHandler);
   signal(SIGTERM, ProgramInterruptHandler);
 
-  FBCPInit();
+  fbcp_init(NULL, 0, 0, 0);
 
   while (!quit)
   {
-    FBCPProcessFrame();
+    fbcp_process();
   }
 
   if (!exited)
   {
-    FBCPExit();
+    fbcp_exit();
   }
 
   return 0;
 }
+

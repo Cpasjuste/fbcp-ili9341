@@ -5,13 +5,22 @@
 #ifndef FBCP_ILI9341_FBCP_H
 #define FBCP_ILI9341_FBCP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 // if targetFramebuffer == NULL, use dispmanx framebuffer
-int FBCPInit(uint16_t *targetFramebuffer = NULL, int width = 0, int height = 0, int bpp = 0);
+int fbcp_init(uint16_t* targetFramebuffer, int width, int height, int bpp);
 
-void FBCPExit();
+int fbcp_process();
 
-int FBCPProcessFrame();
+void fbcp_exit();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //FBCP_ILI9341_FBCP_H
+
