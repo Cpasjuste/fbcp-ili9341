@@ -290,7 +290,7 @@ extern "C" int fbcp_process()
   }
   else
   {
-    __atomic_load_n(&numNewGpuFrames, __ATOMIC_SEQ_CST);
+    numNewFrames = __atomic_load_n(&numNewGpuFrames, __ATOMIC_SEQ_CST);
   }
   bool gotNewFramebuffer = (numNewFrames>0);
   bool framebufferHasNewChangedPixels = true;
